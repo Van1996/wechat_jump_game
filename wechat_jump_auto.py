@@ -69,20 +69,13 @@ else:
     swipe = {}
     swipe['x1'], swipe['y1'], swipe['x2'], swipe['y2'] = 320, 410, 320, 410
 
-
 screenshot_backup_dir = 'screenshot_backups/'
 if not os.path.isdir(screenshot_backup_dir):
         os.mkdir(screenshot_backup_dir)
 
 
 def pull_screenshot():
-    process = subprocess.Popen('adb shell screencap -p', shell=True, stdout=subprocess.PIPE)
-    screenshot = process.stdout.read()
-    if sys.platform == 'win32':
-        screenshot = screenshot.replace(b'\r\n', b'\n')
-    f = open('autojump.png', 'wb')
-    f.write(screenshot)
-    f.close()
+    os.system("adb shell screencap -p | sed 's/\\r$//' > autojump.png")
 
 def backup_screenshot(ts):
     # 为了方便失败的时候 debug
@@ -339,7 +332,13 @@ def main():
     dump_device_info()
     check_adb()
     while True:
+        print("start_new_jump")
         pull_screenshot()
+        i = 0
+        while not os.path.exists('./autojump.png') and i < 20:      # 尝试等待新截图的到来
+            time.sleep(1)
+            i += 1
+            pass
         im = Image.open('./autojump.png')
         # 获取棋子和 board 的位置
         piece_x, piece_y, board_x, board_y = find_piece_and_board(im)
@@ -350,6 +349,7 @@ def main():
         save_debug_creenshot(ts, im, piece_x, piece_y, board_x, board_y)
         backup_screenshot(ts)
         time.sleep(random.uniform(1.2, 1.4))   # 为了保证截图的时候应落稳了，多延迟一会儿
+        os.remove('./autojump.png')            # 避免使用旧的截图
 
 
 if __name__ == '__main__':
